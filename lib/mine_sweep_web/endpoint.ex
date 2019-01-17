@@ -13,7 +13,8 @@ defmodule MineSweepWeb.Endpoint do
     at: "/",
     from: :mine_sweep,
     gzip: false,
-    only: ~w(css fonts images js favicon.ico robots.txt)
+    only: ~w(css fonts js robots.txt img index.html),
+    only_matching: ~w(safari site apple favicon android)
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

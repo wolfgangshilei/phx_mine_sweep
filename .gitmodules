@@ -1,0 +1,3 @@
+[submodule "priv/assets"]
+	path = priv/assets
+	url = https://github.com/wolfgangshilei/mine-sweep.git
