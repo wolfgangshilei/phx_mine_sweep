@@ -1,0 +1,24 @@
+jobs:
+  include:
+  - stage: test
+    language: elixir
+    elixir: 1.7.4
+    git:
+      submodules: false
+    otp_release: 21.2.2
+    script: mix test
+    install:
+    - mix local.rebar --force
+    - mix local.hex --force
+    - mix deps.get
+  - stage: deploy
+    language: minimal
+    services:
+    - docker
+    before_deploy: chmod +x heroku-deploy.sh
+    deploy:
+    - provider: script
+      script:  ./heroku-deploy.sh
+      on:
+        all_branches: true
+        condition: $TRAVIS_BRANCH =~ ^master$
