@@ -26,14 +26,24 @@ defmodule MineSweepWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/api/v1", MineSweepWeb do
+
+  scope "/api/v1/auth", MineSweepWeb do
     pipe_through :api
 
-    dev_only(options "/auth/login", AuthController, :options)
-    dev_only(options "/auth/signup", AuthController, :options)
-    dev_only(options "/auth/session", AuthController, :options)
-    post "/auth/login", AuthController, :login
-    post "/auth/signup", AuthController, :signup
-    get "/auth/session", AuthController, :session
+    dev_only(options "/login", AuthController, :options)
+    dev_only(options "/signup", AuthController, :options)
+    post "/login", AuthController, :login
+    post "/signup", AuthController, :signup
+  end
+
+  scope "/api/v1/session", MineSweepWeb do
+    pipe_through :api
+
+    dev_only(options "/", SessionController, :options)
+    dev_only(options "/record", SessionController, :options)
+    dev_only(options "/records/user/:username", SessionController, :options)
+    get "/", SessionController, :session
+    post "/record", SessionController, :create_record
+    get "/records/user/:username", SessionController, :records_by_username
   end
 end

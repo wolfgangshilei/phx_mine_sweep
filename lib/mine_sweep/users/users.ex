@@ -35,35 +35,6 @@ defmodule MineSweep.Users do
   end
 
   @doc """
-  Returns the list of credentials.
-
-  ## Examples
-
-      iex> list_credentials()
-      [%Credential{}, ...]
-
-  """
-  def list_credentials do
-    Repo.all(Credential)
-  end
-
-  @doc """
-  Gets a single credential.
-
-  Raises `Ecto.NoResultsError` if the Credential does not exist.
-
-  ## Examples
-
-      iex> get_credential!(123)
-      %Credential{}
-
-      iex> get_credential!(456)
-      ** (Ecto.NoResultsError)
-
-  """
-  def get_credential!(id), do: Repo.get!(Credential, id)
-
-  @doc """
   Creates a credential.
 
   ## Examples
@@ -85,50 +56,68 @@ defmodule MineSweep.Users do
     |> Repo.insert()
   end
 
+  alias MineSweep.Users.Record
+
   @doc """
-  Updates a credential.
+  Returns the list of records.
 
   ## Examples
 
-      iex> update_credential(credential, %{field: new_value})
-      {:ok, %Credential{}}
-
-      iex> update_credential(credential, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
+      iex> list_best_records_by_username("Username", 3)
+      [%Record{}, ...]
 
   """
-  def update_credential(%Credential{} = credential, attrs) do
-    credential
-    |> Credential.changeset(attrs)
-    |> Repo.update()
+  def list_best_records_by_username(username, n) do
+    sq = from r in Record,
+      inner_join: c in assoc(r, :credential), on: c.username == ^username,
+      select: %{level: r.level,
+                inserted_at: r.inserted_at,
+                record: r.record,
+                row_number: over(row_number(), :levels)},
+      windows: [levels: [partition_by: r.level, order_by: [asc: r.record]]]
+    res = from r in subquery(sq),
+      where: r.row_number <= ^n
+    Repo.all(res)
   end
 
   @doc """
-  Deletes a Credential.
+  Returns the list of records.
 
   ## Examples
 
-      iex> delete_credential(credential)
-      {:ok, %Credential{}}
-
-      iex> delete_credential(credential)
-      {:error, %Ecto.Changeset{}}
+      iex> list_latest_records_by_username("Username", 3)
+      [%Record{}, ...]
 
   """
-  def delete_credential(%Credential{} = credential) do
-    Repo.delete(credential)
+  def list_latest_records_by_username(username, n) do
+    sq = from r in Record,
+      inner_join: c in assoc(r, :credential), on: c.username == ^username,
+      select: %{level: r.level,
+                inserted_at: r.inserted_at,
+                record: r.record,
+                row_number: over(row_number(), :levels)},
+      windows: [levels: [partition_by: r.level, order_by: [desc: r.inserted_at]]]
+    res = from r in subquery(sq),
+      where: r.row_number <= ^n
+    Repo.all(res)
   end
 
   @doc """
-  Returns an `%Ecto.Changeset{}` for tracking credential changes.
+  Creates a record.
 
   ## Examples
 
-      iex> change_credential(credential)
-      %Ecto.Changeset{source: %Credential{}}
+      iex> create_record(%{field: value})
+      {:ok, %Record{}}
+
+      iex> create_record(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
 
   """
-  def change_credential(%Credential{} = credential) do
-    Credential.changeset(credential, %{})
+  def create_record(%Credential{} = c, attrs \\ %{}) do
+    c
+    |> Ecto.build_assoc(:records, %{})
+    |> Record.changeset(attrs)
+    |> Repo.insert()
   end
 end

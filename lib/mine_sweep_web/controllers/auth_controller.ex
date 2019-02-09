@@ -31,17 +31,4 @@ defmodule MineSweepWeb.AuthController do
     end
   end
   def signup(_, _), do: {:error, :wrong_params}
-
-  def session(conn, _) do
-    user =
-      conn
-      |> fetch_session
-      |> get_session(:user)
-    case user do
-      %{id: _, username: _} = user ->
-        json(conn, %{result: :ok, data:   user})
-      _ ->
-        json(conn, %{result: :fail, reason: "No current session"})
-    end
-  end
 end
