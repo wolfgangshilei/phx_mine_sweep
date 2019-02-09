@@ -12,7 +12,9 @@ config :logger, level: :warn
 # Configure your database
 config :mine_sweep, MineSweep.Repo,
   username: "postgres",
-  password: "postgres",
+  password: "",
   database: "mine_sweep_test",
   hostname: "localhost",
   pool: Ecto.Adapters.SQL.Sandbox
+
+config :bcrypt_elixir, :log_rounds, 4
