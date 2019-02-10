@@ -49,13 +49,12 @@ RUN apk update && \
   mix local.rebar --force && \
   mix local.hex --force
 
-RUN apk add --no-cache
-
 # This copies our app source code into the build container
 COPY . .
 COPY --from=client-builder /opt/build/resources/public/js/compiled/ priv/assets/resources/public/js/compiled/
 
 RUN mix do deps.get, deps.compile, compile
+RUN cd deps/bcrypt_elixir && make clean && make
 
 # This step builds assets for the Phoenix app (if there is one)
 # If you aren't building a Phoenix app, pass `--build-arg SKIP_PHOENIX=true`
