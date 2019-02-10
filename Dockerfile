@@ -42,9 +42,14 @@ RUN apk update && \
   apk upgrade --no-cache && \
   apk add --no-cache \
     git \
-    build-base && \
+    build-base \
+    make \
+    gcc \
+    libc-dev && \
   mix local.rebar --force && \
   mix local.hex --force
+
+RUN apk add --no-cache
 
 # This copies our app source code into the build container
 COPY . .
