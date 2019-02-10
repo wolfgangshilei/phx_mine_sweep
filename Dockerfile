@@ -89,4 +89,4 @@ WORKDIR /opt/app
 
 COPY --from=srv-builder /opt/built .
 
-CMD trap 'exit' INT; /opt/app/bin/${APP_NAME} foreground
+CMD trap 'exit' INT; /opt/app/bin/${APP_NAME} migrate; /opt/app/bin/${APP_NAME} foreground
