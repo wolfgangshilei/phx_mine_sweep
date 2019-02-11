@@ -1,6 +1,6 @@
 # The version of Alpine to use for the final image
 # This should match the version of Alpine that the `elixir:1.7.4-alpine` image uses
-ARG ALPINE_VERSION=3.8
+ARG ALPINE_VERSION=3.9
 
 FROM clojure:latest AS client-builder
 
@@ -9,7 +9,7 @@ COPY ./priv/assets/ /opt/build/
 WORKDIR /opt/build
 RUN lein deps && lein cljsbuild once min
 
-FROM elixir:1.7.4-alpine AS srv-builder
+FROM elixir:1.8.1-alpine AS srv-builder
 
 # The following are build arguments used to change variable parts of the image.
 # The name of your application/release (required)
@@ -25,13 +25,10 @@ ARG SKIP_PHOENIX=false
 # can be built
 ARG PHOENIX_SUBDIR=.
 
-ARG SECRET_KEY_BASE=""
-
 ENV SKIP_PHOENIX=${SKIP_PHOENIX} \
     APP_NAME=${APP_NAME} \
     APP_VSN=${APP_VSN} \
-    MIX_ENV=${MIX_ENV} \
-    SECRET_KEY_BASE=${SECRET_KEY_BASE}
+    MIX_ENV=${MIX_ENV}
 
 
 # By convention, /opt is typically used for applications
@@ -84,7 +81,7 @@ ARG APP_NAME
 RUN apk update && \
     apk add --no-cache \
       bash \
-      openssl-dev
+      openssl
 
 ENV REPLACE_OS_VARS=true \
     APP_NAME=${APP_NAME}

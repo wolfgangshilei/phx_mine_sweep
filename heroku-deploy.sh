@@ -8,7 +8,6 @@ docker build \
        --build-arg APP_NAME=$APP_NAME  \
        --build-arg APP_VSN=$APP_VSN \
        --build-arg SKIP_PHOENIX=true \
-       --build-arg SECRET_BASE_KEY=$SECRET_BASE_KEY \
        -t $APP_NAME:$APP_VSN .
 
 echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin registry.heroku.com
