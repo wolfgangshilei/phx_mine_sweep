@@ -2,12 +2,14 @@
 # This should match the version of Alpine that the `elixir:1.7.4-alpine` image uses
 ARG ALPINE_VERSION=3.9
 
-FROM clojure:latest AS client-builder
+FROM clojure:alpine AS client-builder
 
+RUN apk add --update nodejs npm
 RUN mkdir /opt/build
 COPY ./priv/assets/ /opt/build/
 WORKDIR /opt/build
-RUN lein deps && lein cljsbuild once min
+RUN npm install
+RUN node_modules/shadow-cljs/cli/runner.js release app
 
 FROM elixir:1.8.1-alpine AS srv-builder
 
@@ -30,7 +32,6 @@ ENV SKIP_PHOENIX=${SKIP_PHOENIX} \
     APP_VSN=${APP_VSN} \
     MIX_ENV=${MIX_ENV}
 
-
 # By convention, /opt is typically used for applications
 WORKDIR /opt/app
 
@@ -48,9 +49,9 @@ RUN apk update && \
 
 # This copies our app source code into the build container
 COPY . .
-COPY --from=client-builder /opt/build/resources/public/js/compiled/ priv/assets/resources/public/js/compiled/
+COPY --from=client-builder /opt/build/resources/public/js/compiled/app.js priv/assets/resources/public/js/compiled/app.js
 
-RUN mix do deps.get, deps.compile, compile
+RUN mix do deps.get, deps.compile, compile, phx.digest
 RUN cd deps/bcrypt_elixir && make clean && make
 
 # This step builds assets for the Phoenix app (if there is one)
