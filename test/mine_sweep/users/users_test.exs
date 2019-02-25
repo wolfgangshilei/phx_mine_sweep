@@ -6,7 +6,7 @@ defmodule MineSweep.UsersTest do
   describe "credentials" do
     alias MineSweep.Users.Credential
 
-    @valid_attrs %{password: "some password", username: "some username"}
+    @valid_attrs %{password: "some_password", username: "some_username"}
 
     def credential_fixture(attrs \\ %{}) do
       {:ok, credential} =
@@ -19,14 +19,77 @@ defmodule MineSweep.UsersTest do
 
     test "create_credential/1 with valid data creates a credential" do
       assert {:ok, %Credential{} = credential} = Users.create_credential(@valid_attrs)
-      assert Bcrypt.verify_pass "some password", credential.password
-      assert credential.username == "some username"
+      assert Bcrypt.verify_pass "some_password", credential.password
+      assert credential.username == "some_username"
     end
 
     test "create_credential/1 with replicate username returns error changeset" do
       assert {:ok, %Credential{}} = Users.create_credential(@valid_attrs)
-      assert {:error, %Ecto.Changeset{valid?: false}} = Users.create_credential(@valid_attrs)
+      assert {:error, %Ecto.Changeset{valid?: false, errors: errors}} = Users.create_credential(@valid_attrs)
+      assert {"has already been taken", [
+               constraint: :unique,
+               constraint_name: "credentials_username_index"
+             ]} =  Keyword.get(errors, :username)
     end
+
+    test "create_credential/1 with missing username returns error changeset" do
+      assert {:error, %Ecto.Changeset{valid?: false, errors: errors}} =
+        Users.create_credential(Map.delete(@valid_attrs, :username))
+      assert {"can't be blank", [validation: :required]} =  Keyword.get(errors, :username)
+    end
+
+    test "create_credential/1 with missing password returns error changeset" do
+      assert {:error, %Ecto.Changeset{valid?: false, errors: errors}} =
+        Users.create_credential(%{@valid_attrs | password: nil})
+      assert {"can't be blank", [validation: :required]} =  Keyword.get(errors, :password)
+    end
+
+    test "create_credential/1 with username is empty string" do
+      assert {:error, %Ecto.Changeset{valid?: false, errors: errors}} =
+        Users.create_credential(%{@valid_attrs | username: ""})
+
+      assert {"can't be blank", [validation: :required]} =  Keyword.get(errors, :username)
+    end
+
+    test "create_credential/1 with password too short" do
+      assert {:error, %Ecto.Changeset{valid?: false, errors: errors}} =
+        Users.create_credential(%{@valid_attrs | password: "111"})
+
+      assert {"should be at least %{count} character(s)",
+              [count: 6, validation: :length, kind: :min]} =  Keyword.get(errors, :password)
+    end
+
+    test "create_credential/1 with username and password with wrong format" do
+      assert {:error, %Ecto.Changeset{valid?: false, errors: errors}} =
+        Users.create_credential(%{@valid_attrs | password: "select a", username: "<script/>"})
+
+      assert {"should only contain letters, digits and characters in @.#_!$%", [validation: :format]} =
+        Keyword.get(errors, :password)
+
+      assert {"should only contain letters, digits and characters in @.#_", [validation: :format]} =
+        Keyword.get(errors, :username)
+    end
+
+    test "authenticate_username_and_password/1 returns ok" do
+      assert {:ok, cred = %Credential{}} = Users.create_credential(@valid_attrs)
+      assert {:ok, ^cred} = Users.authenticate_username_and_password(@valid_attrs)
+    end
+
+    test "authenticate_username_and_password/1 with wrong password" do
+      assert {:ok, cred = %Credential{}} = Users.create_credential(@valid_attrs)
+      assert {:error, :wrong_username_or_password} = Users.authenticate_username_and_password(%{@valid_attrs | password: "wrongPassword"})
+    end
+
+    test "authenticate_username_and_password/1 with non-existing user" do
+      assert {:ok, cred = %Credential{}} = Users.create_credential(@valid_attrs)
+      assert {:error, :wrong_username_or_password} = Users.authenticate_username_and_password(%{@valid_attrs | username: "unknown_user"})
+    end
+
+    test "authenticate_username_and_password/1 with username and password not provided" do
+      assert {:ok, cred = %Credential{}} = Users.create_credential(@valid_attrs)
+      assert {:error, %Ecto.Changeset{valid?: false}} = Users.authenticate_username_and_password(%{password: nil, username: nil})
+    end
+
   end
 
   describe "records" do
@@ -39,8 +102,8 @@ defmodule MineSweep.UsersTest do
 
     def record_fixture() do
 
-      creds = [%{username: "a", password: "a"},
-               %{username: "b", password: "b"}]
+      creds = [%{username: "abc", password: "111111"},
+               %{username: "efg", password: "111111"}]
 
       Enum.reduce(creds, [], fn cred, acc ->
         {:ok, c} = Users.create_credential(cred)

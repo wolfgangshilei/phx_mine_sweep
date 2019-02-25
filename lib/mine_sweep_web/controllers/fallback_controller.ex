@@ -2,11 +2,11 @@ defmodule MineSweepWeb.FallbackController do
   use Phoenix.Controller
   @json_error %{result: :error}
 
-  def call(conn, {:error, :unauthorized}) do
+  def call(conn, {:error, :unauthenticated}) do
     conn
     |> fetch_session
     |> configure_session(drop: true)
-    |> put_status(403)
+    |> put_status(401)
     |> json(@json_error)
   end
 

@@ -75,7 +75,7 @@ defmodule MineSweepWeb.SessionController do
         conn
       _ ->
         conn
-        |> put_status(401)
+        |> put_status(403)
         |> json(%{result: :error})
         |> halt
     end

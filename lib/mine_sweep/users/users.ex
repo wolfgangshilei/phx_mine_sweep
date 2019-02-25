@@ -5,32 +5,32 @@ defmodule MineSweep.Users do
 
   import Ecto.Query, warn: false
   alias MineSweep.Repo
-
   alias MineSweep.Users.Credential
-
   alias Bcrypt
 
   @doc """
   Check if user exists with given username and password.
+  If the given username and password are invalid, returns {:error, %Ecto.Changeset{}}.
 
-  Returns {:ok, %Credential{}} if login successfully, otherwise returns
-  {:error, :unauthorized}
+  Returns {:ok, %Credential{}} if username and password are correctly checked against stored credential,
+  otherwise returns {:error, :unauthenticated}
   """
-  def authorize_by_username_and_password(username, password) do
-    q =
-      from c in Credential,
-      where: c.username == ^username
+  def authenticate_username_and_password(attrs) do
+    case Credential.query_params_check(%Credential{}, attrs)
+      do
+      %Ecto.Changeset{valid?: true, changes: %{password: password, username: username}} ->
+        q = from c in Credential, where: c.username == ^username
 
-    case Repo.one(q) do
-      %Credential{password: stored_hash} = c ->
-        case Bcrypt.verify_pass password, stored_hash do
-          true ->
-            {:ok, c}
-          false ->
-            {:error, :unauthorized}
+        with cred = %Credential{password: stored_hash} <- Repo.one(q),
+             true <- Bcrypt.verify_pass(password, stored_hash) do
+                {:ok, cred}
+        else
+          _ ->
+            {:error, :wrong_username_or_password}
         end
-      _ ->
-        {:error, :unauthorized}
+
+      %Ecto.Changeset{valid?: false} = change ->
+        {:error, change}
     end
   end
 
@@ -46,13 +46,9 @@ defmodule MineSweep.Users do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_credential(%{password: password} = attrs \\ %{}) do
-    hashed_store =
-      Bcrypt.hash_pwd_salt password
-    hashed_attrs = Map.replace! attrs, :password, hashed_store
-
+  def create_credential(attrs) do
     %Credential{}
-    |> Credential.changeset(hashed_attrs)
+    |> Credential.changeset(attrs)
     |> Repo.insert()
   end
 
