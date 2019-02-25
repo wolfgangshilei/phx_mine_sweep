@@ -46,7 +46,7 @@ defmodule MineSweepWeb.SessionController do
   def records_by_username(conn, %{"username" => username} = params) do
     n =
       case Map.get(params, "n", "") |> Integer.parse do
-        {n, _} when n <= @max_records ->
+        {n, _} when n <= @max_records_num ->
           n
         :error ->
           @default_records_num
