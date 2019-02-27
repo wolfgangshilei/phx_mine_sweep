@@ -69,7 +69,8 @@ defmodule MineSweep.Users do
       select: %{level: r.level,
                 inserted_at: r.inserted_at,
                 record: r.record,
-                row_number: over(row_number(), :levels)},
+                row_number: over(row_number(), :levels),
+                username: c.username},
       windows: [levels: [partition_by: r.level, order_by: [asc: r.record]]]
     res = from r in subquery(sq),
       where: r.row_number <= ^n
@@ -91,8 +92,28 @@ defmodule MineSweep.Users do
       select: %{level: r.level,
                 inserted_at: r.inserted_at,
                 record: r.record,
-                row_number: over(row_number(), :levels)},
+                row_number: over(row_number(), :levels),
+                username: c.username},
       windows: [levels: [partition_by: r.level, order_by: [desc: r.inserted_at]]]
+    res = from r in subquery(sq),
+      where: r.row_number <= ^n
+    Repo.all(res)
+  end
+
+  @doc """
+  Returns a list of n records ordered by the record finish time in ascending order
+  for each level.
+  """
+  def list_all_time_best_records(n) do
+    sq = from r in Record,
+      inner_join: c in assoc(r, :credential),
+      select: %{level: r.level,
+                inserted_at: r.inserted_at,
+                record: r.record,
+                username: c.username,
+                row_number: over(row_number(), :levels)},
+      windows: [levels: [partition_by: r.level, order_by: [asc: r.record]]]
+
     res = from r in subquery(sq),
       where: r.row_number <= ^n
     Repo.all(res)

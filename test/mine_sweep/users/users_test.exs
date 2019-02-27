@@ -177,6 +177,7 @@ defmodule MineSweep.UsersTest do
       assert %{"easy" => easy, "medium" => medium, "hard" => hard} =
         Users.list_latest_records_by_username(cred1.username, 2)
         |> Enum.group_by(&Map.get(&1, :level))
+        |> IO.inspect
       assert 2 == hard |> length
       assert 2 == easy |> length
       assert 2 == hard |> length

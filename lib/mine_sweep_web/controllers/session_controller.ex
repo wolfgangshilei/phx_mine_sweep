@@ -44,15 +44,7 @@ defmodule MineSweepWeb.SessionController do
 
   @doc false
   def records_by_username(conn, %{"username" => username} = params) do
-    n =
-      case Map.get(params, "n", "") |> Integer.parse do
-        {n, _} when n <= @max_records_num ->
-          n
-        :error ->
-          @default_records_num
-      end
-
-    order_by = Map.get(params, "order-by", "best-record")
+    {n, order_by} = check_records_params params
 
     r =
       case order_by do
@@ -65,6 +57,17 @@ defmodule MineSweepWeb.SessionController do
     r = r |> Enum.group_by(&Map.get(&1, :level))
     r |> inspect |> Logger.debug
     json(conn, %{result: :ok, data: r})
+  end
+
+  @doc false
+  def all_time_best_records(conn, params) do
+    {n, _} = check_records_params params
+
+    result =
+      Users.list_all_time_best_records(n)
+      |> Enum.group_by(&Map.get(&1, :level))
+    result |> inspect |> Logger.debug
+    json(conn, %{result: :ok, data: result})
   end
 
   def authorize(conn, _) do
@@ -80,4 +83,18 @@ defmodule MineSweepWeb.SessionController do
         |> halt
     end
   end
+
+  defp check_records_params(params) do
+    n =
+      case Map.get(params, "n", "") |> Integer.parse do
+        {n, _} when n <= @max_records_num ->
+          n
+        :error ->
+          @default_records_num
+      end
+    order_by = Map.get(params, "order-by", "best")
+
+    {n, order_by}
+  end
+
 end

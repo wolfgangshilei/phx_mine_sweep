@@ -30,5 +30,6 @@ defmodule MineSweepWeb.Router do
     get "/", SessionController, :session
     post "/record", SessionController, :create_record
     get "/records/user/:username", SessionController, :records_by_username
+    get "/records/all-time-best", SessionController, :all_time_best_records
   end
 end
