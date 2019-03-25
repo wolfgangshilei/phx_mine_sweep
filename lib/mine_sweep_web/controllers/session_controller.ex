@@ -39,34 +39,16 @@ defmodule MineSweepWeb.SessionController do
   end
   def create_record(_, _), do: {:error, :wrong_params}
 
-  @max_records_num 50
-  @default_records_num 5
-
   @doc false
-  def records_by_username(conn, %{"username" => username} = params) do
-    {n, order_by} = check_records_params params
-
-    r =
-      case order_by do
-        "latest" ->
-          Users.list_latest_records_by_username(username, n)
-
-        _ ->
-          Users.list_best_records_by_username(username, n)
-      end
-    r = r |> Enum.group_by(&Map.get(&1, :level))
-    r |> inspect |> Logger.debug
-    json(conn, %{result: :ok, data: r})
-  end
-
-  @doc false
-  def all_time_best_records(conn, params) do
-    {n, _} = check_records_params params
+  def list_records(conn, params) do
+    ## TODO: ad-hoc mapping from kebab to snake case for field order-by.
+    ##       Should use a plug (there are 3rd party libraries)
+    ##       as a more robust solution
+    params = Map.put(params, "order_by", Map.get(params, "order-by", nil))
 
     result =
-      Users.list_all_time_best_records(n)
+      Users.list_records(params)
       |> Enum.group_by(&Map.get(&1, :level))
-    result |> inspect |> Logger.debug
     json(conn, %{result: :ok, data: result})
   end
 
@@ -83,18 +65,4 @@ defmodule MineSweepWeb.SessionController do
         |> halt
     end
   end
-
-  defp check_records_params(params) do
-    n =
-      case Map.get(params, "n", "") |> Integer.parse do
-        {n, _} when n <= @max_records_num ->
-          n
-        :error ->
-          @default_records_num
-      end
-    order_by = Map.get(params, "order-by", "best")
-
-    {n, order_by}
-  end
-
 end

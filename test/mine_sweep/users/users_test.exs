@@ -126,37 +126,8 @@ defmodule MineSweep.UsersTest do
       end
     end
 
-    test "list_best_records_by_username/2 returns the given user's first n best records of each level" do
-      [cred1, _] = record_fixture()
-
-      records =
-        [{11, "easy"},
-         {8, "easy"},
-         {12, "easy"},
-         {43, "medium"},
-         {35, "medium"},
-         {38, "medium"},
-         {138, "hard"},
-         {88, "hard"},
-         {159, "hard"},
-        ]
-      for {r, l} <- records do
-        assert {:ok, %Record{}} = Users.create_record(cred1, %{record: r, level: l})
-      end
-
-      assert %{"easy" => easy, "medium" => medium, "hard" => hard} =
-        Users.list_best_records_by_username(cred1.username, 2)
-        |> Enum.group_by(&Map.get(&1, :level))
-      assert 2 == easy |> length
-      assert 2 == hard |> length
-      assert 2 == medium |> length
-      assert %{record: 8} = easy |> List.first
-      assert %{record: 35} = medium |> List.first
-      assert %{record: 88} = hard |> List.first
-    end
-
-    test "list_latest_records_by_username/2 returns the given user's first n latest records of each level" do
-      [cred1, _] = record_fixture()
+    test "list_records/2 returns a user's first n records in a given order, if username is provided; otherwise returns first n records in a given order for all users." do
+      [cred1, cred2] = record_fixture()
 
       records =
         [{11, "easy"},
@@ -171,13 +142,16 @@ defmodule MineSweep.UsersTest do
         ]
       Enum.each records, fn {r, l} ->
         assert {:ok, %Record{}} = Users.create_record(cred1, %{record: r, level: l})
+        assert {:ok, %Record{}} = Users.create_record(cred2, %{record: r, level: l})
         :timer.sleep 1000
       end
 
+      ## test order by insertion time.
       assert %{"easy" => easy, "medium" => medium, "hard" => hard} =
-        Users.list_latest_records_by_username(cred1.username, 2)
+        Users.list_records(%{"order_by" => "latest",
+                             "username" => cred1.username,
+                             "n" => "2"})
         |> Enum.group_by(&Map.get(&1, :level))
-        |> IO.inspect
       assert 2 == hard |> length
       assert 2 == easy |> length
       assert 2 == hard |> length
@@ -185,6 +159,31 @@ defmodule MineSweep.UsersTest do
       assert %{record: 12} = easy |> List.first
       assert %{record: 38} = medium |> List.first
       assert %{record: 159} = hard |> List.first
+
+      ## test default order (by finish time)
+      assert %{"easy" => easy, "medium" => medium, "hard" => hard} =
+        Users.list_records(%{"order_by" => "bestt",
+                             "username" => cred1.username,
+                             "n" => "2"})
+        |> Enum.group_by(&Map.get(&1, :level))
+      assert 2 == easy |> length
+      assert 2 == hard |> length
+      assert 2 == medium |> length
+      assert %{record: 8} = easy |> List.first
+      assert %{record: 35} = medium |> List.first
+      assert %{record: 88} = hard |> List.first
+
+      ## test list without a username
+      assert %{"easy" => easy, "medium" => medium, "hard" => hard} =
+        Users.list_records(%{"order_by" => "best", "n" => "2"})
+        |> Enum.group_by(&Map.get(&1, :level))
+      assert 2 == easy |> length
+      assert 2 == hard |> length
+      assert 2 == medium |> length
+      assert [%{record: 8}, %{record: 8}] = easy
+      assert [%{record: 35}, %{record: 35}] = medium
+      assert [%{record: 88}, %{record: 88}] = hard
+
     end
   end
 end

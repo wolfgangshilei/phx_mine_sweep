@@ -54,69 +54,29 @@ defmodule MineSweep.Users do
 
   alias MineSweep.Users.Record
 
-  @doc """
-  Returns the list of records.
-
-  ## Examples
-
-      iex> list_best_records_by_username("Username", 3)
-      [%Record{}, ...]
-
-  """
-  def list_best_records_by_username(username, n) do
-    sq = from r in Record,
-      inner_join: c in assoc(r, :credential), on: c.username == ^username,
-      select: %{level: r.level,
-                inserted_at: r.inserted_at,
-                record: r.record,
-                row_number: over(row_number(), :levels),
-                username: c.username},
-      windows: [levels: [partition_by: r.level, order_by: [asc: r.record]]]
-    res = from r in subquery(sq),
-      where: r.row_number <= ^n
-    Repo.all(res)
-  end
+  @default_records_num 5
 
   @doc """
   Returns the list of records.
 
   ## Examples
 
-      iex> list_latest_records_by_username("Username", 3)
+      iex> list_records("best", "Username", 3)
       [%Record{}, ...]
 
   """
-  def list_latest_records_by_username(username, n) do
-    sq = from r in Record,
-      inner_join: c in assoc(r, :credential), on: c.username == ^username,
-      select: %{level: r.level,
-                inserted_at: r.inserted_at,
-                record: r.record,
-                row_number: over(row_number(), :levels),
-                username: c.username},
-      windows: [levels: [partition_by: r.level, order_by: [desc: r.inserted_at]]]
-    res = from r in subquery(sq),
-      where: r.row_number <= ^n
-    Repo.all(res)
-  end
+  def list_records(params) do
+    import Ecto.Changeset
 
-  @doc """
-  Returns a list of n records ordered by the record finish time in ascending order
-  for each level.
-  """
-  def list_all_time_best_records(n) do
-    sq = from r in Record,
-      inner_join: c in assoc(r, :credential),
-      select: %{level: r.level,
-                inserted_at: r.inserted_at,
-                record: r.record,
-                username: c.username,
-                row_number: over(row_number(), :levels)},
-      windows: [levels: [partition_by: r.level, order_by: [asc: r.record]]]
+    query_params =
+    {%{}, %{n: :integer, username: :string, order_by: :string}}
+    |> cast(params, [:n, :username, :order_by])
 
-    res = from r in subquery(sq),
-      where: r.row_number <= ^n
-    Repo.all(res)
+    do_list_records(
+      get_change(query_params, :order_by),
+      get_change(query_params, :username),
+      get_change(query_params, :n, @default_records_num)
+    )
   end
 
   @doc """
@@ -136,5 +96,28 @@ defmodule MineSweep.Users do
     |> Ecto.build_assoc(:records, %{})
     |> Record.changeset(attrs)
     |> Repo.insert()
+  end
+
+  defp do_list_records(order, username, n) do
+    all_users =  if username, do: dynamic([r, c], c.username == ^username), else: true
+
+    basic_query =
+      from r in Record,
+      inner_join: c in assoc(r, :credential), on: ^all_users,
+      select: %{level: r.level,
+                inserted_at: r.inserted_at,
+                record: r.record,
+                username: c.username,
+                row_number: over(row_number(), :levels)}
+
+    query = case order do
+              "latest" ->
+                basic_query |> windows([r, c], [levels: [partition_by: r.level, order_by: [desc: r.inserted_at]]])
+              _ ->
+                ## order by best time by default
+                basic_query |> windows([r, c], [levels: [partition_by: r.level, order_by: [asc: r.record]]])
+            end
+
+    Repo.all(from r in subquery(query), where: r.row_number <= ^n)
   end
 end
